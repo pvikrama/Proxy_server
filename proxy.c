@@ -1,6 +1,7 @@
 /*			proxy.c - A Mutithreaded Caching Web Proxy
- *	Team member 1: Vignesh Gadiyar, Andrew ID: vgadiyar
- *	Team member 2: Pradeep Kumar Vikraman, Andrew ID: pvikrama
+ *      Team member 1: Pradeep Kumar Vikraman, Andrew ID: pvikrama
+ *	Team member 2: Vignesh Gadiyar, Andrew ID: vgadiyar
+ *	
  *
  *	Description: The Proxy developed uses HTTP/1.0 queries to query the server.
  *	Multi-threading is employed by using the pthread functions and caching is 
@@ -15,7 +16,7 @@
  *	acts as a timestamp value during eviction. This bit is also incremented when
  *	we touch a particular node. Merge Sort function is used to sort the list 
  *	during the eviction process
-*/
+ */
 
 #include "csapp.h"
 
@@ -23,15 +24,15 @@
 #define MAX_OBJECT_SIZE 102400
 
 static const char *user_agent = "User-Agent: Mozilla/5.0 (X11; Linux x86_64;\
-								rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
+								 rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
 static const char *accept1 = "Accept: text/html,application/xhtml+xml,\
 							  application/xml;q=0.9,*/*;q=0.8\r\n";
-static const char *accept_encoding = "Accept-Encoding: gzip, deflate\r\n";
-static const char *connection = "Connection: close\r\n";
-static const char *proxyconn = "Proxy-Connection: close\r\n";
+													   static const char *accept_encoding = "Accept-Encoding: gzip, deflate\r\n";
+													   static const char *connection = "Connection: close\r\n";
+													   static const char *proxyconn = "Proxy-Connection: close\r\n";
 
-/* Structure for storing modified client request */
-struct student
+							  /* Structure for storing modified client request */
+							  struct student
 {
 	char host[MAXLINE];
 	char buf1[MAXLINE];
@@ -99,10 +100,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	port = atoi(argv[1]);
-	
+
 	/* Creating Proxy's listening port */
 	listenfd = Open_listenfd(port);
-	
+
 	while (1) 
 	{
 		clientlen = sizeof(clientaddr);
@@ -125,66 +126,64 @@ int main(int argc, char **argv)
  * request, serves the client and then adds it into the cache */
 void *thread(void *vargp)
 {
-		char buf3[MAXLINE];
-		rio_t rio;
-		int pclientfd, connfd;
-		long int sum=0;
-		
-		connfd = *((int *)vargp);
-		Student *check;
-		
-		/* Thread is detached to free its memory automatically */
-		Pthread_detach(pthread_self());
-		Free(vargp);
-		check = parse(connfd);
+	char buf3[MAXLINE];
+	rio_t rio;
+	int pclientfd, connfd;
+	long int sum=0;
 
-		/* If condition entered on cache hit */
-		if( check->nomsg == 0)
-		{
-			close(connfd);
-			free(check);
-			return NULL;
-		}
-		
-		/* The connection is closed on DNS error */
-		pclientfd = Our_clientfd(check->host , check->portno);
-		if( pclientfd == -1)
-		{
-			close(connfd);
-			free(check->url);
-			free(check);
-			return NULL;
-		}
+	connfd = *((int *)vargp);
+	Student *check;
 
-		Rio_readinitb(&rio, pclientfd);
-		/* Write the modified request message into pclientfd */
-		our_writen(pclientfd, check->buf1, strlen(check->buf1));
+	/* Thread is detached to free its memory automatically */
+	Pthread_detach(pthread_self());
+	Free(vargp);
+	check = parse(connfd);
 
-		/* Write the server's repsonse into a temporary buffer 'cachebuf' 
-		 * before updating this into cache */
-		char cachebuf[MAX_OBJECT_SIZE];
-		int c_size=0;
-		/* Copy response from server into temporary buffer */
-		while((sum= our_readnb(&rio, buf3, sizeof(buf3))))
-		{
-			if(c_size+sum <= MAX_OBJECT_SIZE)
-			{
-				memcpy(cachebuf+c_size, buf3, sum);
-			}
-			c_size+=sum;
-			our_writen(connfd, buf3, sizeof(buf3));
-		}
-		 
-		/* Update cache only if sizeof objects <= MAX_OBJECT_SIZE */
-		if(c_size <= MAX_OBJECT_SIZE)
-			cache_add(cachebuf, c_size, check->url);
-		else
-			free(check->url);
-		
+	/* If condition entered on cache hit */
+	if( check->nomsg == 0)
+	{
+		close(connfd);
 		free(check);
-		Close(pclientfd);
-		Close(connfd);
 		return NULL;
+	}
+
+	/* The connection is closed on DNS error */
+	pclientfd = Our_clientfd(check->host , check->portno);
+	if( pclientfd == -1)
+	{
+		close(connfd);
+		free(check->url);
+		free(check);
+		return NULL;
+	}
+
+	Rio_readinitb(&rio, pclientfd);
+	/* Write the modified request message into pclientfd */
+	our_writen(pclientfd, check->buf1, strlen(check->buf1));
+
+	/* Write the server's repsonse into a temporary buffer 'cachebuf' 
+	 * before updating this into cache */
+	char cachebuf[MAX_OBJECT_SIZE];
+	int c_size=0;
+	/* Copy response from server into temporary buffer */
+	while((sum= our_readnb(&rio, buf3, sizeof(buf3))))
+	{
+		if(c_size+sum <= MAX_OBJECT_SIZE)
+			memcpy(cachebuf+c_size, buf3, sum);
+		c_size+=sum;
+		our_writen(connfd, buf3, sizeof(buf3));
+	}
+
+	/* Update cache only if sizeof objects <= MAX_OBJECT_SIZE */
+	if(c_size <= MAX_OBJECT_SIZE)
+		cache_add(cachebuf, c_size, check->url);
+	else
+		free(check->url);
+
+	free(check);
+	Close(pclientfd);
+	Close(connfd);
+	return NULL;
 }
 
 /* Parse function basically does 2 operations, firstly it checks whether the 
@@ -197,10 +196,10 @@ Student *parse(int connfd)
 	rio_t rio;
 	Student *str;
 	char buf[MAXLINE], method[MAXLINE]="A", version[MAXLINE],\
-		hdr[MAXLINE], hdrval[100], uri[MAXLINE];
+										hdr[MAXLINE], hdrval[100], uri[MAXLINE];
 	int urlsize;
 	char *url;
-	
+
 	str = (Student *) malloc(sizeof(Student));
 	if(str == NULL)
 	{
@@ -210,7 +209,7 @@ Student *parse(int connfd)
 	Rio_readinitb(&rio, connfd);
 	Rio_readlineb(&rio, buf, MAXLINE);
 	sscanf(buf, "%s %s %s", method, uri, version);
-	
+
 	/* Dynamically allocate memory for url to prevent sharing between threads */
 	urlsize = sizeof(uri);
 	url = (char *)malloc(urlsize);
@@ -220,14 +219,14 @@ Student *parse(int connfd)
 		return NULL;
 	}
 	strcpy(url,uri);
-	
+
 	/* Handle only GET requests */
 	if(strcmp(method,"GET")==0)
 	{
 		char *hostsrt,*pathsrt;
 		char *port, buftmp[20], temp1[300];
 		int portno = 80;
-		
+
 		int ret;
 		/* Call cache lookup */
 		ret = lookup(url, connfd);
@@ -244,7 +243,7 @@ Student *parse(int connfd)
 		strcpy(version,"HTTP/1.0");
 		hostsrt = uri + 7;
 		/* Get Host name */
-		 if(!strstr(hostsrt, ":"))
+		if(!strstr(hostsrt, ":"))
 			sscanf(hostsrt, "%[^/]s", str->host);
 		else
 		{
@@ -276,7 +275,7 @@ Student *parse(int connfd)
 		if(portno == 0)
 			portno = 80;
 		str->portno = portno;
-		
+
 		/* Populating buf1 which contains modified HTTP 1.0 request */
 		sprintf(str->buf1, "%s %s %s\r\n", method, uri, version);
 		sprintf(str->buf1, "%sHost: %s\r\n", str->buf1, str->host);
@@ -285,11 +284,11 @@ Student *parse(int connfd)
 		sprintf(str->buf1, "%s%s" , str->buf1, accept_encoding);
 		sprintf(str->buf1, "%s%s" , str->buf1, connection);
 		sprintf(str->buf1, "%s%s" , str->buf1, proxyconn);
-		
+
 		Rio_readlineb(&rio, buf, MAXLINE);
-		
+
 		/* Populate BUF1 with the same header, header values as the original
-         * request for all other header's apart from the hardcored ones 
+		 * request for all other header's apart from the hardcored ones 
 		 * and do this until you reach a blank line (\r\n) 
 		 */
 		while(strcmp(buf, "\r\n")) 
@@ -297,8 +296,8 @@ Student *parse(int connfd)
 			sscanf(buf,"%s %s", hdr, hdrval);
 
 			if (strcmp(hdr, "Host:")!=0 && strcmp(hdr, "User-Agent:")!=0 && \
- 			strcmp(hdr, "Accept:")!=0 && strcmp(hdr, "Accept-Encoding:")!=0 &&\
-			strcmp( hdr,"Connection:")!=0 && strcmp(hdr,"Proxy-Connection:")!=0)
+					strcmp(hdr, "Accept:")!=0 && strcmp(hdr, "Accept-Encoding:")!=0 &&\
+					strcmp( hdr,"Connection:")!=0 && strcmp(hdr,"Proxy-Connection:")!=0)
 				sprintf(str->buf1, "%s%s", str->buf1, buf);
 			Rio_readlineb(&rio, buf, MAXLINE);
 		}
@@ -308,7 +307,7 @@ Student *parse(int connfd)
 		str->nomsg = 1;
 		return str;
 	}
-	
+
 	/* Ignoring Non-GET requests */
 	else
 	{
@@ -321,20 +320,20 @@ Student *parse(int connfd)
 /* Wrapper for rio_readnb to not exit on error */
 ssize_t our_readnb(rio_t *rp, void *usrbuf, size_t n) 
 {
-    ssize_t rc;
+	ssize_t rc;
 
-    if ((rc = rio_readnb(rp, usrbuf, n)) < 0)
+	if ((rc = rio_readnb(rp, usrbuf, n)) < 0)
 	{
 		printf("Rio_readnb error\n");
 		return 0;
 	}
-    return rc;
+	return rc;
 }
 
 /* Wrapper for rio_writen to not exit on error */
 void our_writen(int fd, void *usrbuf, size_t n) 
 {
-    if (rio_writen(fd, usrbuf, n) != n)
+	if (rio_writen(fd, usrbuf, n) != n)
 		return;
 }
 
@@ -359,7 +358,7 @@ int lookup(char *url, int connfd)
 			n->lru = count;
 			count=count+1;
 			pthread_mutex_unlock(&mutex);
-			
+
 			/*Copy data from cache into a temp buffer before unlocking read
 			 *this is done because copying into temporary buffer is faster
 			 *than serving the data all over the network to the client, hence
@@ -367,7 +366,7 @@ int lookup(char *url, int connfd)
 			 */
 			char tempbuf[n->size];
 			memcpy(tempbuf, n->data, n->size);
-			
+
 			pthread_rwlock_unlock(&rwlock);
 			/*Copy data from temporary buffer to client after unlocking write*/ 
 			serve_client(connfd, tempbuf, n->size);
@@ -397,12 +396,10 @@ void cache_add(char *rp, int object_size, char *url)
 	 * blocked writer threads run to completion
 	 */
 	pthread_rwlock_wrlock(&rwlock);
-	
+
 	/* Call eviction if size of data in cache is going to overflow */
 	if(current_cache_size + object_size > MAX_CACHE_SIZE)
-	{
 		eviction(object_size);
-	}
 
 	/* Populate the new cache object */
 	new_node = (Node *)malloc(sizeof(Node));
@@ -420,14 +417,14 @@ void cache_add(char *rp, int object_size, char *url)
 		printf("Out of memory\n");
 		return;
 	}
-	
+
 	/* Copy data into the newly created cache object from the temporary buffer
 	 * cachebuf which is populated in thread function and contains server 
 	 * response*/
 	memcpy(new_node->data, rp, object_size);
-	
+
 	/* Add new node to the front of the doubly linked list */
-	
+
 	/* If doubly linked list is empty */
 	if(head == NULL)
 	{
@@ -439,15 +436,15 @@ void cache_add(char *rp, int object_size, char *url)
 	{
 		new_node->next = head;
 		new_node->prev = NULL;
-	    head->prev = new_node;
+		head->prev = new_node;
 		head = new_node;
 	}
-	
+
 	/* Update Global Variables */
 	current_cache_size+=object_size;
 	count=count+1;
 	total_objects=total_objects+1;
-	
+
 	/* Release write lock */
 	pthread_rwlock_unlock(&rwlock);
 }	
@@ -477,9 +474,7 @@ void eviction(int object_size)
 		sum+= n[i]->size;
 		delete(n[i]);
 		if(sum >= object_size)
-		{
 			break;
-		}
 	}
 }
 
@@ -487,99 +482,93 @@ void eviction(int object_size)
 /* Common mergesort algorithm employed here */
 void MergeSort(Node **array, int left, int right)
 {
-        int mid;
-		mid= (left+right)/2;
-        /* Sort only when left<right */
-        if (left < right)
-        {
-                /* Sort from left to mid */
-                MergeSort(array,left,mid);
-                /* Sort from mid to right */
-                MergeSort(array,mid+1,right);
-                /* Merge operation takes place here*/
-                Merge(array,left,mid,right);
-        }
+	int mid;
+	mid= (left+right)/2;
+	/* Sort only when left<right */
+	if (left < right)
+	{
+		/* Sort from left to mid */
+		MergeSort(array,left,mid);
+		/* Sort from mid to right */
+		MergeSort(array,mid+1,right);
+		/* Merge operation takes place here*/
+		Merge(array,left,mid,right);
+	}
 }
 
 /* Merge functions to merge 2 arrays. Node array passed to the function
- */
+*/
 void Merge(Node **array, int left, int mid, int right)
 {
-        int pos=0,lpos = left,rpos = mid + 1, i;
-		Node *tempArray[right-left+1];
-		/* Choose where the elemnt has to go based on value */
-        while(lpos <= mid && rpos <= right)
-        {
-				/* Sorting based on lru of the Node */
-                if(array[lpos]->lru < array[rpos]->lru)
-                {
-                        tempArray[pos++] = array[lpos++];
-                }
-                else
-                {
-                        tempArray[pos++] = array[rpos++];
-                }
-        }
-        while(lpos <= mid)  tempArray[pos++] = array[lpos++];
-        while(rpos <= right) tempArray[pos++] = array[rpos++];
-        /* Copy into the original array */
-        for(i = 0;i < pos; i++)
-        {
-                array[i+left] = tempArray[i];
-        }
-        return;
+	int pos=0,lpos = left,rpos = mid + 1, i;
+	Node *tempArray[right-left+1];
+	/* Choose where the elemnt has to go based on value */
+	while(lpos <= mid && rpos <= right)
+	{
+		/* Sorting based on lru of the Node */
+		if(array[lpos]->lru < array[rpos]->lru)
+			tempArray[pos++] = array[lpos++];
+		else
+			tempArray[pos++] = array[rpos++];
+	}
+	while(lpos <= mid)  tempArray[pos++] = array[lpos++];
+	while(rpos <= right) tempArray[pos++] = array[rpos++];
+	/* Copy into the original array */
+	for(i = 0;i < pos; i++)
+		array[i+left] = tempArray[i];
+	return;
 }
-		
+
 /* Delete function to delete a particular node from the cache */
 void delete(struct node *delete)
 {   
-        int size;
-		/* Check for boundary conditions, adjust pointers and free memory */
-		if(delete->prev != NULL)
-			delete->prev->next=delete->next;
-	    if(delete->next != NULL)
-			delete->next->prev=delete->prev;
-		size = delete->size;
-        
-		free(delete->data);
-		free(delete->url);
-		free(delete);
-		
-		/* Update global variables */
-        total_objects=total_objects-1;
-        current_cache_size -= size;
+	int size;
+	/* Check for boundary conditions, adjust pointers and free memory */
+	if(delete->prev != NULL)
+		delete->prev->next=delete->next;
+	if(delete->next != NULL)
+		delete->next->prev=delete->prev;
+	size = delete->size;
+
+	free(delete->data);
+	free(delete->url);
+	free(delete);
+
+	/* Update global variables */
+	total_objects=total_objects-1;
+	current_cache_size -= size;
 }
 
 /* Wrapper function for signal */
 handler_t *mySignal(int signum, handler_t *handler) 
 {
-    struct sigaction action, old_action;
+	struct sigaction action, old_action;
 
-    action.sa_handler = handler;  
-    sigemptyset(&action.sa_mask); /* block sigs of type being handled */
-    action.sa_flags = SA_RESTART; /* restart syscalls if possible */
+	action.sa_handler = handler;  
+	sigemptyset(&action.sa_mask); /* block sigs of type being handled */
+	action.sa_flags = SA_RESTART; /* restart syscalls if possible */
 
-    if (sigaction(signum, &action, &old_action) < 0)
+	if (sigaction(signum, &action, &old_action) < 0)
 		printf("Signal error");
-    return (old_action.sa_handler);
+	return (old_action.sa_handler);
 }
 
 /* Threadsafe Open Clientfd */
 int our_clientfd(char *hostname, int port) 
 {
-    int clientfd;
-    struct hostent *hp;
-    struct sockaddr_in serveraddr;
+	int clientfd;
+	struct hostent *hp;
+	struct sockaddr_in serveraddr;
 	int herr, hres;
 	char *tmp=NULL;
 	int tmplen = MAXLINE;
 	struct hostent hostbuf;
 
-    if ((clientfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	if ((clientfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 		return -1; /* check errno for cause of error */
 
-    /* Fill in the server's IP address and port */
-	tmp = (char *) malloc(tmplen);
+	/* Fill in the server's IP address and port */
+	tmp = (char *) malloc(tmplen); 
 	/* Use threadsafe gethostbyname_r */
 	hres = gethostbyname_r(hostname, &hostbuf, tmp, tmplen, &hp, &herr);
 	if (hres != 0 || hp == NULL)
@@ -587,23 +576,23 @@ int our_clientfd(char *hostname, int port)
 		printf("Couldn't resolve name\n");
 		return -2;
 	}
-    bzero((char *) &serveraddr, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET;
-    bcopy((char *)hp->h_addr_list[0], 
-	  (char *)&serveraddr.sin_addr.s_addr, hp->h_length);
-    serveraddr.sin_port = htons(port);
+	bzero((char *) &serveraddr, sizeof(serveraddr));
+	serveraddr.sin_family = AF_INET;
+	bcopy((char *)hp->h_addr_list[0], 
+			(char *)&serveraddr.sin_addr.s_addr, hp->h_length);
+	serveraddr.sin_port = htons(port);
 
-    /* Establish a connection with the server */
-    if (connect(clientfd, (SA *) &serveraddr, sizeof(serveraddr)) < 0)
+	/* Establish a connection with the server */
+	if (connect(clientfd, (SA *) &serveraddr, sizeof(serveraddr)) < 0)
 		return -1;
-    return clientfd;
+	return clientfd;
 }
 
 /* Wrapper for Open_clientfd */
 int Our_clientfd(char *hostname, int port) 
 {
-    int rc;
-    if ((rc = our_clientfd(hostname, port)) < 0) {
+	int rc;
+	if ((rc = our_clientfd(hostname, port)) < 0) {
 		if (rc == -1)
 		{
 			printf("Open_clientfd Unix error");
@@ -611,6 +600,6 @@ int Our_clientfd(char *hostname, int port)
 		}
 		else  
 			return -1;
-    }
-    return rc;
+	}
+	return rc;
 }
